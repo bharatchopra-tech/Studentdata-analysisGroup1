@@ -1,0 +1,163 @@
+---
+title: "Iris Data Analysis Project"
+author: "Group 1"
+date: "2025-11-29"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+set.seed(123)
+```
+
+## Load Packages
+
+```{r libraries}
+library(tidyverse)
+library(janitor)
+library(psych)
+library(rsample)
+```
+
+## Import Data
+
+```{r import-data}
+iris_data <- read_csv("iris.csv") %>%
+  clean_names()
+
+dim(iris_data)
+names(iris_data)
+head(iris_data, 15)
+```
+
+## User-defined Function
+
+```{r normalize-function}
+normalize <- function(x) {
+  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+}
+
+iris_data <- iris_data %>%
+  mutate(sepal_length_norm = normalize(sepal_length_cm))
+```
+
+## Filtering Rows
+
+```{r filter-rows}
+iris_filtered <- iris_data %>%
+  filter(petal_length_cm > 4)
+
+head(iris_filtered, 10)
+```
+
+## Remove Missing Values
+
+```{r remove-missing}
+iris_no_na <- iris_data %>% drop_na()
+sum(!complete.cases(iris_no_na))
+```
+
+## Remove Duplicates
+
+```{r remove-duplicates}
+iris_dedup <- iris_no_na %>% distinct()
+nrow(iris_no_na) - nrow(iris_dedup)
+```
+
+## Reorder Rows
+
+```{r reorder-rows}
+iris_ordered <- iris_dedup %>% arrange(desc(petal_width_cm), desc(sepal_length_cm))
+head(iris_ordered, 10)
+```
+
+## Rename Columns
+
+```{r rename-columns}
+iris_renamed <- iris_dedup %>%
+  rename(Sepal_Length = sepal_length_cm,
+         Sepal_Width  = sepal_width_cm,
+         Petal_Length = petal_length_cm,
+         Petal_Width  = petal_width_cm)
+
+names(iris_renamed)
+```
+
+## Add New Variables
+
+```{r add-vars}
+iris_augmented <- iris_renamed %>%
+  mutate(double_petal_length = Petal_Length * 2,
+         sepal_area_approx = Sepal_Length * Sepal_Width)
+
+head(iris_augmented, 10)
+```
+
+## Training and Testing Split
+
+```{r train-test}
+split_obj <- initial_split(iris_augmented, prop = 0.7)
+train_df <- training(split_obj)
+test_df  <- testing(split_obj)
+
+nrow(train_df); nrow(test_df)
+```
+
+## Summary Statistics
+
+```{r summary-stats}
+summary(iris_augmented)
+```
+
+## Mean, Median, Mode, Range
+
+```{r mean-median-mode-range}
+x <- iris_augmented$Sepal_Length
+
+mean(x)
+median(x)
+
+mode_stat <- function(v) {
+  v <- v[!is.na(v)]
+  u <- unique(v)
+  u[which.max(tabulate(match(v, u)))]
+}
+mode_stat(x)
+
+range(x)
+```
+
+## Scatter Plot
+
+```{r scatter-plot, fig.height=4, fig.width=6}
+ggplot(iris_augmented, aes(x = Sepal_Length, y = Petal_Length)) +
+  geom_point(alpha = 0.8, color = "steelblue") +
+  labs(title = "Scatter: Sepal Length vs Petal Length") +
+  theme_minimal()
+```
+
+## Bar Plot (Example: Frequency of Rounded Sepal Lengths)
+
+```{r bar-plot, fig.height=4, fig.width=6}
+iris_augmented %>%
+  mutate(sepal_length_round = round(Sepal_Length)) %>%
+  count(sepal_length_round) %>%
+  ggplot(aes(x = sepal_length_round, y = n)) +
+  geom_col(fill = "darkorange") +
+  labs(title = "Bar: Frequency of Rounded Sepal Lengths",
+       x = "Sepal Length (rounded)", y = "Count") +
+  theme_minimal()
+```
+
+## Pearson Correlation
+
+```{r correlation}
+cor(iris_augmented$Sepal_Length, iris_augmented$Petal_Length, method = "pearson")
+```
+
+---
+
+## References
+
+Dataset source: Kaggle — Iris Dataset (`iris.csv`)  
+GitHub repository: [https://github.com/bharatchopra-tech/Netflixldata-analysisGroup1](https://github.com/bharatchopra-tech/Netflixldata-analysisGroup1)
