@@ -1,0 +1,184 @@
+---
+title: "Assignment 1"
+author: "Group 1"
+date: "2025-11-29"
+output:
+  html_document:
+    df_print: paged
+---
+
+---
+title: "Students Performance Data Analysis"
+author: "Group 1"
+date: "`r format(Sys.Date())`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+fontsize: 11pt
+geometry: margin=1in
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+set.seed(123)
+```
+
+## Load Packages
+
+```{r libraries}
+library(tidyverse)
+library(janitor)
+library(psych)
+library(rsample)
+```
+
+## Import Data
+
+```{r import-data}
+students <- read_csv("C:/Users/Bharat/Desktop/Proj/StudentsPerformance.csv") %>%
+  clean_names()
+
+dim(students)
+names(students)
+head(students, 10)
+```
+
+## Structure and Variables
+
+```{r structure}
+str(students)
+summary(students)
+```
+
+## Filter Rows (Example: students with math score > 80)
+
+```{r filter-rows}
+high_math <- students %>%
+  filter(math_score > 80)
+
+head(high_math, 10)
+```
+
+## Remove Missing Values
+
+```{r remove-missing}
+students_no_na <- students %>% drop_na()
+sum(!complete.cases(students_no_na))
+```
+
+## Remove Duplicates
+
+```{r remove-duplicates}
+students_dedup <- students_no_na %>% distinct()
+nrow(students_no_na) - nrow(students_dedup)
+```
+
+## Reorder Rows (Descending by reading score)
+
+```{r reorder-rows}
+students_ordered <- students_dedup %>% arrange(desc(reading_score))
+head(students_ordered, 10)
+```
+
+## Rename Columns (for easier use)
+
+```{r rename-columns}
+students_renamed <- students_dedup %>%
+  rename(Gender = gender,
+         Ethnicity = race_ethnicity,
+         Parental_Education = parental_level_of_education,
+         Lunch = lunch,
+         Test_Prep = test_preparation_course,
+         Math = math_score,
+         Reading = reading_score,
+         Writing = writing_score)
+
+names(students_renamed)
+```
+
+## Add New Variables
+
+```{r add-vars}
+students_augmented <- students_renamed %>%
+  mutate(Average_Score = (Math + Reading + Writing)/3,
+         Passed_Math = ifelse(Math >= 50, "Yes", "No"))
+
+head(students_augmented, 10)
+```
+
+## Training and Testing Split
+
+```{r train-test}
+split_obj <- initial_split(students_augmented, prop = 0.7)
+train_df <- training(split_obj)
+test_df  <- testing(split_obj)
+
+nrow(train_df); nrow(test_df)
+```
+
+## Summary Statistics
+
+```{r summary-stats}
+students_augmented %>%
+  group_by(Gender) %>%
+  summarize(
+    count = n(),
+    mean_math = mean(Math),
+    mean_reading = mean(Reading),
+    mean_writing = mean(Writing)
+  )
+```
+
+## Mean, Median, Mode, Range (Math Scores)
+
+```{r mean-median-mode-range}
+x <- students_augmented$Math
+
+mean(x)
+median(x)
+
+mode_stat <- function(v) {
+  v <- v[!is.na(v)]
+  u <- unique(v)
+  u[which.max(tabulate(match(v, u)))]
+}
+mode_stat(x)
+
+range(x)
+```
+
+## Scatter Plot (Math vs Reading)
+
+```{r scatter-plot, fig.height=4, fig.width=6}
+ggplot(students_augmented, aes(x = Math, y = Reading, color = Gender)) +
+  geom_point(alpha = 0.8) +
+  labs(title = "Scatter: Math vs Reading Scores") +
+  theme_minimal()
+```
+
+## Bar Plot (Average Score by Lunch Type)
+
+```{r bar-plot, fig.height=4, fig.width=6}
+students_augmented %>%
+  group_by(Lunch) %>%
+  summarize(mean_avg = mean(Average_Score)) %>%
+  ggplot(aes(x = Lunch, y = mean_avg, fill = Lunch)) +
+  geom_col() +
+  labs(title = "Bar: Average Score by Lunch Type") +
+  theme_minimal()
+```
+
+## Pearson Correlation (Math vs Writing)
+
+```{r correlation}
+cor(students_augmented$Math, students_augmented$Writing, method = "pearson")
+```
+
+---
+
+## References
+
+Dataset source: Kaggle — Students Performance Dataset  
+GitHub repository: [https://github.com/bharatchopra-tech/Studentdata-analysisGroup1](https://github.com/bharatchopra-tech/Studentdata-analysisGroup1)
